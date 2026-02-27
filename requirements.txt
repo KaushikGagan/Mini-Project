@@ -1,3 +1,6 @@
-py -m pip install flask
-py -m pip install flask_sqlalchemy
-py -m pip install razorpay
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+razorpay==1.4.1
+pyotp==2.9.0
+qrcode==7.4.2
+Pillow==10.2.0

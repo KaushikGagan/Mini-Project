@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Setup Authenticator</title>
+<style>
+body{
+ background:#0f172a;
+ color:white;
+ font-family:Segoe UI;
+ text-align:center;
+ padding-top:100px;
+}
+.container{
+ background:#1e293b;
+ width:400px;
+ margin:auto;
+ padding:30px;
+ border-radius:12px;
+}
+a{
+ color:#93c5fd;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h2>Scan with Google Authenticator</h2>
+
+<img src="data:image/png;base64,{{ qr_code }}" width="250">
+
+<p>Open Google Authenticator and scan this QR code.</p>
+<p>Then login and use the 6-digit code.</p>
+
+<a href="/">Go to Login</a>
+</div>
+
+</body>
+</html>

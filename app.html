@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>SecurePay</title>
+
+<style>
+body{
+ background:#0f172a;
+ color:white;
+ font-family:Segoe UI;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ height:100vh;
+}
+
+.container{
+ width:400px;
+ background:#1e293b;
+ padding:25px;
+ border-radius:12px;
+}
+
+input,button{
+ width:100%;
+ padding:10px;
+ margin:8px 0;
+ border:none;
+ border-radius:6px;
+}
+
+button{
+ background:#3b82f6;
+ color:white;
+ cursor:pointer;
+}
+
+.error{color:#f87171;font-size:14px;}
+.success{color:#4ade80;}
+
+.eye{ position:relative; }
+.eye span{
+ position:absolute;
+ right:10px;
+ top:12px;
+ cursor:pointer;
+}
+</style>
+
+<script>
+function togglePass(id){
+ let x=document.getElementById(id);
+ x.type=(x.type==="password")?"text":"password";
+}
+</script>
+
+</head>
+<body>
+<div class="container">
+
+{% if page=="login" %}
+<h2>Login</h2>
+<form method="POST">
+<input name="username" placeholder="Username" required>
+
+<div class="eye">
+<input id="pass1" type="password" name="password" placeholder="Password" required>
+<span onclick="togglePass('pass1')">👁</span>
+</div>
+
+<button type="submit">Login</button>
+</form>
+
+<div class="error">{{ error or "" }}</div>
+<a href="/signup_page">Create account</a>
+{% endif %}
+
+
+{% if page=="signup" %}
+<h2>Signup</h2>
+<form method="POST" action="/signup">
+
+<input name="username" required placeholder="Username">
+
+<div class="eye">
+<input id="pass2" type="password" name="password" placeholder="Password" required>
+<span onclick="togglePass('pass2')">👁</span>
+</div>
+
+<div class="eye">
+<input id="pass3" type="password" name="txnpass" placeholder="Transaction Password" required>
+<span onclick="togglePass('pass3')">👁</span>
+</div>
+
+<button type="submit">Register</button>
+</form>
+
+<a href="/">Back to Login</a>
+{% endif %}
+
+
+{% if page=="payment" %}
+<h2>Payment</h2>
+<form method="POST">
+
+<input name="amount" placeholder="Enter Amount" required>
+
+<div class="eye">
+<input id="pass4" type="password" name="txnpass" placeholder="Transaction Password" required>
+<span onclick="togglePass('pass4')">👁</span>
+</div>
+
+<button>Proceed</button>
+</form>
+
+<div class="error">{{ error or "" }}</div>
+{% endif %}
+
+
+{% if page=="otp" %}
+<h2>Enter OTP</h2>
+<p>Time remaining: <span id="timer">{{ remaining or 0 }}</span> sec</p>
+
+<form method="POST">
+<input name="otp" required placeholder="OTP">
+<button>Verify</button>
+</form>
+
+<div class="error">{{ error or "" }}</div>
+
+<script>
+let t = parseInt("{{ remaining or 0 }}");
+let el = document.getElementById("timer");
+
+setInterval(function(){
+ if(t > 0){
+   t--;
+   if(el) el.innerText = t;
+ }
+},1000);
+</script>
+{% endif %}
+
+
+{% if page=="pay_api" %}
+<h2>Pay ₹{{ amount }}</h2>
+<button id="pay-btn">Pay Now</button>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+var options={
+ "key":"{{ key_id }}",
+ "amount":"{{ amount|int * 100 }}",
+ "order_id":"{{ order_id }}",
+ "handler":function(){
+    window.location="/success";
+ },
+ "modal":{
+  "ondismiss":function(){
+    window.location="/payment_failed";
+  }
+ }
+};
+
+var rzp=new Razorpay(options);
+
+document.getElementById('pay-btn').onclick=function(e){
+ rzp.open();
+ e.preventDefault();
+}
+</script>
+{% endif %}
+
+
+{% if page=="failed" %}
+<h2 style="color:#f87171;">Payment Failed</h2>
+<a href="/payment">Try Again</a>
+{% endif %}
+
+
+{% if page=="success" %}
+<h2 class="success">Payment Successful</h2>
+
+<p style="margin-top:15px;">Blockchain Transaction ID:</p>
+<p style="font-size:12px;word-wrap:break-word;color:#93c5fd;">
+{{ block_hash }}
+</p>
+
+<a href="/">Logout</a>
+{% endif %}
+
+</div>
+</body>
+</html>

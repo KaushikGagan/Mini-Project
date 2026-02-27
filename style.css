@@ -1,0 +1,70 @@
+body{
+    margin:0;
+    font-family:Segoe UI;
+    background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    color:white;
+}
+
+.container{
+    width:420px;
+    padding:30px;
+    border-radius:20px;
+    background:rgba(0,0,0,0.55);
+    backdrop-filter:blur(20px);
+    box-shadow:0 20px 50px rgba(0,0,0,0.7);
+    text-align:center;
+}
+
+.bank-header h1{
+    margin-bottom:5px;
+    font-weight:600;
+}
+
+.bank-header p{
+    font-size:13px;
+    color:#aaa;
+    margin-bottom:20px;
+}
+
+input{
+    width:100%;
+    padding:12px;
+    margin:10px 0;
+    border:none;
+    border-radius:8px;
+    background:#1f2a38;
+    color:white;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:8px;
+    background:linear-gradient(90deg,#00c6ff,#0072ff);
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+button:hover{
+    transform:scale(1.05);
+}
+
+a{
+    color:#bbb;
+    display:block;
+    margin-top:15px;
+    text-decoration:none;
+}
+
+.payment-box{
+    background:#1b2735;
+    padding:20px;
+    border-radius:12px;
+}

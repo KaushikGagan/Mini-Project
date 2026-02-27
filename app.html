@@ -1,49 +1,97 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>SecurePay</title>
+<title>SecurePay Bank</title>
 
 <style>
 body{
+ margin:0;
  background:#0f172a;
- color:white;
  font-family:Segoe UI;
+ color:white;
+}
+
+/* Header */
+.header{
+ background:#1e293b;
+ padding:15px;
+ text-align:center;
+ font-size:22px;
+ font-weight:bold;
+ letter-spacing:1px;
+}
+
+/* Main Container */
+.main{
  display:flex;
  justify-content:center;
  align-items:center;
- height:100vh;
+ height:85vh;
 }
 
 .container{
- width:400px;
+ width:420px;
  background:#1e293b;
- padding:25px;
+ padding:30px;
  border-radius:12px;
+ box-shadow:0 0 20px rgba(0,0,0,0.4);
 }
 
+/* Inputs */
 input,button{
  width:100%;
- padding:10px;
- margin:8px 0;
+ padding:12px;
+ margin:10px 0;
  border:none;
  border-radius:6px;
+ font-size:14px;
+}
+
+input{
+ background:#334155;
+ color:white;
 }
 
 button{
  background:#3b82f6;
  color:white;
  cursor:pointer;
+ transition:0.3s;
 }
 
-.error{color:#f87171;font-size:14px;}
-.success{color:#4ade80;}
+button:hover{
+ background:#2563eb;
+}
 
-.eye{ position:relative; }
+/* Messages */
+.error{
+ color:#f87171;
+ font-size:13px;
+ margin-top:5px;
+}
+
+.success{
+ color:#4ade80;
+}
+
+/* Password eye */
+.eye{
+ position:relative;
+}
 .eye span{
  position:absolute;
- right:10px;
- top:12px;
+ right:12px;
+ top:14px;
  cursor:pointer;
+}
+
+/* Footer */
+.footer{
+ text-align:center;
+ padding:10px;
+ background:#1e293b;
+ font-size:12px;
+ color:#94a3b8;
 }
 </style>
 
@@ -56,10 +104,17 @@ function togglePass(id){
 
 </head>
 <body>
+
+<div class="header">
+SecurePay Digital Banking
+</div>
+
+<div class="main">
 <div class="container">
 
 {% if page=="login" %}
 <h2>Login</h2>
+
 <form method="POST">
 <input name="username" placeholder="Username" required>
 
@@ -72,18 +127,19 @@ function togglePass(id){
 </form>
 
 <div class="error">{{ error or "" }}</div>
-<a href="/signup_page">Create account</a>
+<a href="/signup_page" style="color:#93c5fd;">Create account</a>
 {% endif %}
 
 
 {% if page=="signup" %}
-<h2>Signup</h2>
+<h2>Create Account</h2>
+
 <form method="POST" action="/signup">
 
-<input name="username" required placeholder="Username">
+<input name="username" placeholder="Username" required>
 
 <div class="eye">
-<input id="pass2" type="password" name="password" placeholder="Password" required>
+<input id="pass2" type="password" name="password" placeholder="Login Password" required>
 <span onclick="togglePass('pass2')">👁</span>
 </div>
 
@@ -95,22 +151,23 @@ function togglePass(id){
 <button type="submit">Register</button>
 </form>
 
-<a href="/">Back to Login</a>
+<a href="/" style="color:#93c5fd;">Back to Login</a>
 {% endif %}
 
 
 {% if page=="payment" %}
-<h2>Payment</h2>
+<h2>Transfer Funds</h2>
+
 <form method="POST">
 
-<input name="amount" placeholder="Enter Amount" required>
+<input name="amount" placeholder="Enter Amount (₹)" required>
 
 <div class="eye">
 <input id="pass4" type="password" name="txnpass" placeholder="Transaction Password" required>
 <span onclick="togglePass('pass4')">👁</span>
 </div>
 
-<button>Proceed</button>
+<button>Proceed to Authentication</button>
 </form>
 
 <div class="error">{{ error or "" }}</div>
@@ -118,33 +175,25 @@ function togglePass(id){
 
 
 {% if page=="otp" %}
-<h2>Enter OTP</h2>
-<p>Time remaining: <span id="timer">{{ remaining or 0 }}</span> sec</p>
+<h2>Two-Factor Authentication</h2>
+<p style="font-size:13px;color:#94a3b8;">
+Enter the 6-digit code from Google Authenticator
+</p>
 
 <form method="POST">
-<input name="otp" required placeholder="OTP">
-<button>Verify</button>
+<input name="otp" placeholder="6-digit Code" required>
+<button>Verify & Continue</button>
 </form>
 
 <div class="error">{{ error or "" }}</div>
-
-<script>
-let t = parseInt("{{ remaining or 0 }}");
-let el = document.getElementById("timer");
-
-setInterval(function(){
- if(t > 0){
-   t--;
-   if(el) el.innerText = t;
- }
-},1000);
-</script>
 {% endif %}
 
 
 {% if page=="pay_api" %}
-<h2>Pay ₹{{ amount }}</h2>
-<button id="pay-btn">Pay Now</button>
+<h2>Confirm Payment</h2>
+<p>Amount: ₹{{ amount }}</p>
+
+<button id="pay-btn">Pay Securely</button>
 
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
@@ -174,7 +223,8 @@ document.getElementById('pay-btn').onclick=function(e){
 
 {% if page=="failed" %}
 <h2 style="color:#f87171;">Payment Failed</h2>
-<a href="/payment">Try Again</a>
+<p>Please try again.</p>
+<a href="/payment" style="color:#93c5fd;">Retry Payment</a>
 {% endif %}
 
 
@@ -186,9 +236,15 @@ document.getElementById('pay-btn').onclick=function(e){
 {{ block_hash }}
 </p>
 
-<a href="/">Logout</a>
+<a href="/" style="color:#93c5fd;">Logout</a>
 {% endif %}
 
 </div>
+</div>
+
+<div class="footer">
+© 2026 SecurePay Bank | Protected by 2FA & Blockchain
+</div>
+
 </body>
 </html>

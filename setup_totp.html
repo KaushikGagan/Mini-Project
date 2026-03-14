@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecurePay — Setup Authenticator</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="auth-wrap">
+
+  <header class="auth-header">
+    <div class="logo-icon">🏦</div>
+    <div class="brand">Secure<span>Pay</span></div>
+  </header>
+
+  <div class="auth-body">
+    <div class="auth-card totp-card" style="text-align:center;">
+
+      <div style="font-size:40px; margin-bottom:10px;">📱</div>
+      <h2>Set Up Google Authenticator</h2>
+      <p class="subtitle">Scan the QR code below to enable two-factor authentication on your account.</p>
+
+      <div class="alert alert-warn" style="text-align:left;">
+        ⚠ Complete this step now — you'll need the authenticator app for every login.
+      </div>
+
+      <div class="qr-wrap">
+        <img src="data:image/png;base64,{{ qr_code }}" width="220" alt="QR Code">
+      </div>
+
+      <ol class="steps-list">
+        <li>Install <strong>Google Authenticator</strong> on your phone (iOS / Android).</li>
+        <li>Open the app and tap <strong>"+"</strong> → <strong>"Scan a QR code"</strong>.</li>
+        <li>Point your camera at the QR code above.</li>
+        <li>A 6-digit code will appear — use it every time you transfer funds.</li>
+      </ol>
+
+      <div class="security-badges" style="justify-content:center; margin-bottom:20px;">
+        <span class="badge badge-green">✅ TOTP Enabled</span>
+        <span class="badge badge-blue">🔒 RFC 6238</span>
+      </div>
+
+      <a href="/" class="btn btn-primary" style="display:flex;">
+        🔐 Go to Login
+      </a>
+
+    </div>
+  </div>
+
+  <footer class="auth-footer">
+    © 2026 SecurePay Bank &nbsp;|&nbsp; Protected by 2FA &amp; Blockchain
+  </footer>
+
+</div>
+
+<script src="/static/script.js"></script>
+</body>
+</html>

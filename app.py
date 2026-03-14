@@ -19,23 +19,32 @@ client = razorpay.Client(auth=(
     "8j3b0VhFxCNkiTm7Azd7WHrC"
 ))
 
-# ---------------- DATABASE MODEL ----------------
+# ---------------- DATABASE MODELS ----------------
 class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id       = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True)
     password = db.Column(db.String(100))
-    txnpass = db.Column(db.String(100))
-    secret = db.Column(db.String(200))  # TOTP Secret
+    txnpass  = db.Column(db.String(100))
+    secret   = db.Column(db.String(200))   # TOTP Secret
     attempts = db.Column(db.Integer, default=0)
-    blocked = db.Column(db.Boolean, default=False)
+    blocked  = db.Column(db.Boolean, default=False)
+    balance  = db.Column(db.Float, default=10000.0)  # default demo balance
+
+class Transaction(db.Model):
+    id            = db.Column(db.Integer, primary_key=True)
+    username      = db.Column(db.String(100))
+    amount        = db.Column(db.Float)
+    previous_hash = db.Column(db.String(64))
+    current_hash  = db.Column(db.String(64))
+    timestamp     = db.Column(db.String(50))
 
 # ---------------- BLOCKCHAIN HASH ----------------
-def generate_block_hash(username, amount):
-    data = f"{username}{amount}{datetime.datetime.now()}"
+def generate_block_hash(username, amount, previous_hash="0" * 64):
+    data = f"{username}{amount}{previous_hash}{datetime.datetime.now()}"
     return hashlib.sha256(data.encode()).hexdigest()
 
 # ---------------- LOGIN ----------------
-@app.route('/', methods=['GET','POST'])
+@app.route('/', methods=['GET', 'POST'])
 def login():
     error = ""
 
@@ -57,14 +66,14 @@ def login():
                 user.blocked = True
                 error = "Account blocked after 3 wrong attempts"
             else:
-                error = f"Invalid password ({3-user.attempts} attempts left)"
+                error = f"Invalid password ({3 - user.attempts} attempts left)"
             db.session.commit()
 
         else:
             user.attempts = 0
             db.session.commit()
             session['user'] = username
-            return redirect('/payment')
+            return redirect('/dashboard')
 
     return render_template("app.html", page="login", error=error)
 
@@ -77,10 +86,11 @@ def signup_page():
 def signup():
     username = request.form['username']
     password = request.form['password']
-    txnpass = request.form['txnpass']
+    txnpass  = request.form['txnpass']
 
     if User.query.filter_by(username=username).first():
-        return "User already exists"
+        return render_template("app.html", page="signup",
+                               error="Username already exists. Please choose another.")
 
     secret = pyotp.random_base32()
 
@@ -96,17 +106,35 @@ def signup():
 
     # Generate QR Code for Google Authenticator
     totp = pyotp.TOTP(secret)
-    uri = totp.provisioning_uri(name=username, issuer_name="SecurePay")
+    uri  = totp.provisioning_uri(name=username, issuer_name="SecurePay")
 
-    img = qrcode.make(uri)
+    img    = qrcode.make(uri)
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     img_str = base64.b64encode(buffer.getvalue()).decode()
 
     return render_template("setup_totp.html", qr_code=img_str)
 
+# ---------------- DASHBOARD ----------------
+@app.route('/dashboard')
+def dashboard():
+    if 'user' not in session:
+        return redirect('/')
+
+    user         = User.query.filter_by(username=session['user']).first()
+    transactions = Transaction.query.filter_by(username=session['user'])\
+                                    .order_by(Transaction.id.desc()).all()
+
+    # Simple fraud detection: flag if any single transaction > 5000
+    fraud_alert = any(t.amount > 5000 for t in transactions)
+
+    return render_template("dashboard.html",
+                           user=user,
+                           transactions=transactions,
+                           fraud_alert=fraud_alert)
+
 # ---------------- PAYMENT ----------------
-@app.route('/payment', methods=['GET','POST'])
+@app.route('/payment', methods=['GET', 'POST'])
 def payment():
     error = ""
 
@@ -115,7 +143,7 @@ def payment():
 
     if request.method == 'POST':
         txnpass = request.form['txnpass']
-        amount = request.form['amount']
+        amount  = request.form['amount']
 
         user = User.query.filter_by(username=session['user']).first()
 
@@ -128,25 +156,31 @@ def payment():
     return render_template("app.html", page="payment", error=error)
 
 # ---------------- TOTP VERIFICATION ----------------
-@app.route('/otp', methods=['GET','POST'])
+@app.route('/otp', methods=['GET', 'POST'])
 def otp():
+    if 'user' not in session:
+        return redirect('/')
+
     error = ""
-    user = User.query.filter_by(username=session.get('user')).first()
+    user  = User.query.filter_by(username=session.get('user')).first()
 
     if request.method == 'POST':
         entered = request.form['otp']
-        totp = pyotp.TOTP(user.secret)
+        totp    = pyotp.TOTP(user.secret)
 
         if totp.verify(entered):
             return redirect('/pay_api')
         else:
-            error = "Invalid OTP"
+            error = "Invalid OTP. Please try again."
 
     return render_template("app.html", page="otp", error=error)
 
 # ---------------- RAZORPAY ----------------
 @app.route('/pay_api')
 def pay_api():
+    if 'user' not in session:
+        return redirect('/')
+
     amount = int(float(session.get('amount', 1)) * 100)
 
     order = client.order.create({
@@ -170,10 +204,34 @@ def payment_failed():
 # ---------------- SUCCESS + BLOCKCHAIN ----------------
 @app.route('/success')
 def success():
-    username = session.get('user')
-    amount = session.get('amount')
+    if 'user' not in session:
+        return redirect('/')
 
-    block_hash = generate_block_hash(username, amount)
+    username = session.get('user')
+    amount   = float(session.get('amount', 0))
+
+    # Get previous hash for chaining
+    last_txn      = Transaction.query.filter_by(username=username)\
+                                     .order_by(Transaction.id.desc()).first()
+    previous_hash = last_txn.current_hash if last_txn else "0" * 64
+
+    block_hash = generate_block_hash(username, amount, previous_hash)
+
+    # Save transaction to history
+    txn = Transaction(
+        username=username,
+        amount=amount,
+        previous_hash=previous_hash,
+        current_hash=block_hash,
+        timestamp=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    )
+    db.session.add(txn)
+
+    # Deduct balance
+    user = User.query.filter_by(username=username).first()
+    user.balance = round(user.balance - amount, 2)
+
+    db.session.commit()
 
     return render_template(
         "app.html",

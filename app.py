@@ -7,18 +7,17 @@ import pyotp
 import qrcode
 import io
 import base64
-import os
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "secretkey123")
+app.secret_key = "secretkey123"
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db = SQLAlchemy(app)
 
-RAZORPAY_KEY_ID     = os.environ.get("RAZORPAY_KEY_ID",     "rzp_test_SGr3TtEdPGJPpf")
-RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "8j3b0VhFxCNkiTm7Azd7WHrC")
-
-client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+client = razorpay.Client(auth=(
+    "rzp_test_SGr3TtEdPGJPpf",
+    "8j3b0VhFxCNkiTm7Azd7WHrC"
+))
 
 # ---------------- DATABASE MODELS ----------------
 class User(db.Model):
@@ -169,7 +168,7 @@ def otp():
         entered = request.form['otp']
         totp    = pyotp.TOTP(user.secret)
 
-        if totp.verify(entered):
+        if totp.verify(entered):\
             return redirect('/pay_api')
         else:
             error = "Invalid OTP. Please try again."
@@ -194,7 +193,7 @@ def pay_api():
         "app.html",
         page="pay_api",
         order_id=order['id'],
-        key_id=RAZORPAY_KEY_ID,
+        key_id="rzp_test_SGr3TtEdPGJPpf",
         amount=session.get('amount')
     )
 

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecurePay — Dashboard</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="dash-wrap">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="logo-icon">🏦</div>
+      <div class="brand-name">Secure<span>Pay</span></div>
+    </div>
+
+    <nav class="sb-nav">
+      <a href="/dashboard" class="active">
+        <span>📊</span> Dashboard
+      </a>
+      <a href="/payment">
+        <span>💸</span> Transfer Funds
+      </a>
+      <a href="/dashboard">
+        <span>📋</span> Transactions
+      </a>
+    </nav>
+
+    <div class="sb-footer">
+      <a href="/">
+        <span>🔓</span> Logout
+      </a>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ── -->
+  <main class="dash-main">
+
+    <!-- Top bar -->
+    <div class="dash-topbar">
+      <div>
+        <div class="greeting">Hello, <span>{{ user.username }}</span> 👋</div>
+        <div class="date-tag" id="live-date"></div>
+      </div>
+      <div class="security-badges">
+        <span class="badge badge-green">✅ 2FA Active</span>
+        <span class="badge badge-cyan">⛓ Blockchain</span>
+      </div>
+    </div>
+
+    <!-- Fraud alert (shown only when fraud flag is set) -->
+    {% if fraud_alert %}
+    <div class="fraud-banner">
+      <span style="font-size:20px;">⚠️</span>
+      <div>
+        <strong>Fraud Alert Detected</strong> — Suspicious activity has been flagged on your account. Please review your recent transactions.
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Stat cards -->
+    <div class="cards-row">
+
+      <div class="stat-card balance">
+        <div class="card-icon">💰</div>
+        <div class="card-label">Available Balance</div>
+        <div class="card-value">₹{{ user.balance }}</div>
+        <div class="card-sub">SecurePay Savings Account</div>
+      </div>
+
+      <div class="stat-card txn-count">
+        <div class="card-icon">📋</div>
+        <div class="card-label">Total Transactions</div>
+        <div class="card-value">{{ transactions | length }}</div>
+        <div class="card-sub">All time</div>
+      </div>
+
+      <div class="stat-card fraud">
+        <div class="card-icon">🛡</div>
+        <div class="card-label">Security Status</div>
+        <div class="card-value" style="font-size:18px; color:var(--success);">Protected</div>
+        <div class="card-sub">2FA &amp; Blockchain enabled</div>
+      </div>
+
+    </div>
+
+    <!-- Quick action -->
+    <div style="margin-bottom:28px;">
+      <a href="/payment" class="btn btn-primary" style="width:auto; display:inline-flex; padding:12px 28px;">
+        💸 New Transfer
+      </a>
+    </div>
+
+    <!-- Transaction history -->
+    <div class="section-header">
+      <h3>📋 Transaction History</h3>
+      <span class="badge badge-blue">{{ transactions | length }} records</span>
+    </div>
+
+    <div class="txn-table-wrap">
+      {% if transactions %}
+      <table class="txn-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date &amp; Time</th>
+            <th>Amount</th>
+            <th class="hash-cell">Previous Hash</th>
+            <th class="hash-cell">Transaction Hash</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for txn in transactions %}
+          <tr>
+            <td style="color:var(--muted);">{{ loop.index }}</td>
+            <td>{{ txn.timestamp }}</td>
+            <td class="amount-cell">− ₹{{ txn.amount }}</td>
+            <td class="hash-cell" title="{{ txn.previous_hash }}">{{ txn.previous_hash }}</td>
+            <td class="hash-cell" title="{{ txn.current_hash }}">{{ txn.current_hash }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div>No transactions yet</div>
+        <div style="font-size:12px; margin-top:6px;">Your transaction history will appear here.</div>
+      </div>
+      {% endif %}
+    </div>
+
+  </main>
+</div>
+
+<script src="/static/script.js"></script>
+</body>
+</html>

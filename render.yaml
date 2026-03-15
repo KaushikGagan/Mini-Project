@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: securepay-bank
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: RAZORPAY_KEY_ID
+        value: rzp_test_SGr3TtEdPGJPpf
+      - key: RAZORPAY_KEY_SECRET
+        value: 8j3b0VhFxCNkiTm7Azd7WHrC

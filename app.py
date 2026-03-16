@@ -149,6 +149,8 @@ def payment():
 
         if txnpass != user.txnpass:
             error = "Wrong Transaction Password"
+        elif float(amount) > user.balance:
+            error = f"Insufficient balance. Available: ₹{user.balance}"
         else:
             session['amount'] = amount
             return redirect('/otp')

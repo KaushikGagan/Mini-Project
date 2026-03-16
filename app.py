@@ -11,7 +11,7 @@ import base64
 app = Flask(__name__)
 app.secret_key = "secretkey123"
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/users.db'
 db = SQLAlchemy(app)
 
 client = razorpay.Client(auth=(
@@ -168,7 +168,7 @@ def otp():
         entered = request.form['otp']
         totp    = pyotp.TOTP(user.secret)
 
-        if totp.verify(entered):\
+        if totp.verify(entered):
             return redirect('/pay_api')
         else:
             error = "Invalid OTP. Please try again."
@@ -240,7 +240,8 @@ def success():
     )
 
 # ---------------- MAIN ----------------
+with app.app_context():
+    db.create_all()
+
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)

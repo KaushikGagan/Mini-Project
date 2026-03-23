@@ -1,8 +1,8 @@
 services:
   - type: web
-    name: securepay-bank
+    name: mini-project-i
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install setuptools && pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
       - key: SECRET_KEY

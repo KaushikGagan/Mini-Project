@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, Response
 from flask_sqlalchemy import SQLAlchemy
 import hashlib
 import datetime
@@ -15,18 +15,53 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(32)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
 db = SQLAlchemy(app)
 
-RAZORPAY_KEY_ID     = os.environ.get("RAZORPAY_KEY_ID",     "rzp_test_SGr3TtEdPGJPpf")
+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "rzp_test_SGr3TtEdPGJPpf")
 RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "8j3b0VhFxCNkiTm7Azd7WHrC")
 
-def create_razorpay_order(amount):
+
+# ---------------- SECURITY HEADERS ----------------
+@app.after_request
+def set_security_headers(response: Response) -> Response:
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "connect-src 'self' https://api.razorpay.com; "
+        "frame-src https://api.razorpay.com;"
+    )
+    return response
+
+
+# ---------------- HTTPS REDIRECT ----------------
+@app.before_request
+def enforce_https():
+    if not request.is_secure and request.headers.get('X-Forwarded-Proto', 'http') != 'https':
+        if os.environ.get('RENDER'):
+            url = request.url.replace('http://', 'https://', 1)
+            return redirect(url, code=301)
+
+
+# ---------------- RAZORPAY ----------------
+def create_razorpay_order(amount: int) -> dict:
     response = requests.post(
         "https://api.razorpay.com/v1/orders",
         auth=HTTPBasicAuth(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET),
-        json={"amount": amount, "currency": "INR", "payment_capture": 1}
+        json={"amount": amount, "currency": "INR", "payment_capture": 1},
+        timeout=10
     )
     return response.json()
+
 
 # ---------------- DATABASE MODELS ----------------
 class User(db.Model):
@@ -39,6 +74,7 @@ class User(db.Model):
     blocked  = db.Column(db.Boolean, default=False)
     balance  = db.Column(db.Float, default=10000.0)
 
+
 class Transaction(db.Model):
     id            = db.Column(db.Integer, primary_key=True)
     username      = db.Column(db.String(100))
@@ -47,10 +83,12 @@ class Transaction(db.Model):
     current_hash  = db.Column(db.String(64))
     timestamp     = db.Column(db.String(50))
 
+
 # ---------------- BLOCKCHAIN HASH ----------------
-def generate_block_hash(username, amount, previous_hash="0" * 64):
+def generate_block_hash(username: str, amount: float, previous_hash: str = "0" * 64) -> str:
     data = f"{username}{amount}{previous_hash}{datetime.datetime.now(datetime.timezone.utc)}"
     return hashlib.sha256(data.encode()).hexdigest()
+
 
 # ---------------- LOGIN ----------------
 @app.route('/', methods=['GET', 'POST'])
@@ -86,10 +124,12 @@ def login():
 
     return render_template("app.html", page="login", error=error)
 
+
 # ---------------- SIGNUP ----------------
 @app.route('/signup_page')
 def signup_page():
     return render_template("app.html", page="signup", error="")
+
 
 @app.route('/signup', methods=['POST'])
 def signup():
@@ -123,6 +163,7 @@ def signup():
 
     return render_template("setup_totp.html", qr_code=img_str)
 
+
 # ---------------- DASHBOARD ----------------
 @app.route('/dashboard')
 def dashboard():
@@ -139,6 +180,7 @@ def dashboard():
                            user=user,
                            transactions=transactions,
                            fraud_alert=fraud_alert)
+
 
 # ---------------- PAYMENT ----------------
 @app.route('/payment', methods=['GET', 'POST'])
@@ -172,6 +214,7 @@ def payment():
 
     return render_template("app.html", page="payment", error=error)
 
+
 # ---------------- TOTP VERIFICATION ----------------
 @app.route('/otp', methods=['GET', 'POST'])
 def otp():
@@ -192,6 +235,7 @@ def otp():
 
     return render_template("app.html", page="otp", error=error)
 
+
 # ---------------- RAZORPAY ----------------
 @app.route('/pay_api')
 def pay_api():
@@ -206,7 +250,8 @@ def pay_api():
         amount = int(amount_float * 100)
     except (ValueError, TypeError):
         return redirect('/payment')
-    order  = create_razorpay_order(amount)
+
+    order = create_razorpay_order(amount)
 
     return render_template(
         "app.html",
@@ -216,9 +261,11 @@ def pay_api():
         amount=session.get('amount')
     )
 
+
 @app.route('/payment_failed')
 def payment_failed():
     return render_template("app.html", page="failed")
+
 
 # ---------------- SUCCESS + BLOCKCHAIN ----------------
 @app.route('/success')
@@ -251,9 +298,10 @@ def success():
 
     return render_template("app.html", page="success", block_hash=block_hash)
 
+
 # ---------------- MAIN ----------------
 with app.app_context():
     db.create_all()
 
 if __name__ == "__main__":
-    app.run(debug=os.environ.get("FLASK_DEBUG", "false").lower() == "true")
+    app.run(debug=False)

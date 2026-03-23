@@ -12,7 +12,7 @@ import os
 from requests.auth import HTTPBasicAuth
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "secretkey123")
+app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(32)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db = SQLAlchemy(app)
@@ -198,7 +198,14 @@ def pay_api():
     if 'user' not in session:
         return redirect('/')
 
-    amount = int(float(session.get('amount', 1)) * 100)
+    try:
+        raw = session.get('amount', '1')
+        amount_float = float(raw)
+        if math.isnan(amount_float) or math.isinf(amount_float) or amount_float <= 0:
+            raise ValueError
+        amount = int(amount_float * 100)
+    except (ValueError, TypeError):
+        return redirect('/payment')
     order  = create_razorpay_order(amount)
 
     return render_template(

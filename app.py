@@ -1,12 +1,13 @@
 from flask import Flask, render_template, request, redirect, session
 from flask_sqlalchemy import SQLAlchemy
-import razorpay
 import hashlib
 import datetime
 import pyotp
 import qrcode
 import io
 import base64
+import requests
+from requests.auth import HTTPBasicAuth
 
 app = Flask(__name__)
 app.secret_key = "secretkey123"
@@ -14,10 +15,16 @@ app.secret_key = "secretkey123"
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db = SQLAlchemy(app)
 
-client = razorpay.Client(auth=(
-    "rzp_test_SGr3TtEdPGJPpf",
-    "8j3b0VhFxCNkiTm7Azd7WHrC"
-))
+RAZORPAY_KEY_ID     = "rzp_test_SGr3TtEdPGJPpf"
+RAZORPAY_KEY_SECRET = "8j3b0VhFxCNkiTm7Azd7WHrC"
+
+def create_razorpay_order(amount):
+    response = requests.post(
+        "https://api.razorpay.com/v1/orders",
+        auth=HTTPBasicAuth(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET),
+        json={"amount": amount, "currency": "INR", "payment_capture": 1}
+    )
+    return response.json()
 
 # ---------------- DATABASE MODELS ----------------
 class User(db.Model):
@@ -185,17 +192,13 @@ def pay_api():
 
     amount = int(float(session.get('amount', 1)) * 100)
 
-    order = client.order.create({
-        "amount": amount,
-        "currency": "INR",
-        "payment_capture": 1
-    })
+    order = create_razorpay_order(amount)
 
     return render_template(
         "app.html",
         page="pay_api",
         order_id=order['id'],
-        key_id="rzp_test_SGr3TtEdPGJPpf",
+        key_id=RAZORPAY_KEY_ID,
         amount=session.get('amount')
     )
 

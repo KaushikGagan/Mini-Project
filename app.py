@@ -1,14 +1,14 @@
 from flask import Flask, render_template, request, redirect, session, Response
 from flask_sqlalchemy import SQLAlchemy
 import hashlib
-import datetime
-import pyotp
-import qrcode
 import io
 import base64
-import requests
-import math
 import os
+from datetime import datetime, timezone
+from math import isnan, isinf
+import pyotp
+import qrcode
+import requests
 from requests.auth import HTTPBasicAuth
 
 app = Flask(__name__)
@@ -92,7 +92,7 @@ class Transaction(db.Model):
 
 # ---------------- BLOCKCHAIN HASH ----------------
 def generate_block_hash(username: str, amount: float, previous_hash: str = "0" * 64) -> str:
-    data = f"{username}{amount}{previous_hash}{datetime.datetime.now(datetime.timezone.utc)}"
+    data = f"{username}{amount}{previous_hash}{datetime.now(timezone.utc)}"
     return hashlib.sha256(data.encode()).hexdigest()
 
 
@@ -200,11 +200,12 @@ def payment():
         txnpass = request.form['txnpass']
         amount  = request.form['amount']
 
+        amount_float = None
         try:
             if not amount or amount.strip().lower() in ('nan', 'inf', '-inf', 'infinity'):
                 raise ValueError
             amount_float = float(amount)
-            if math.isnan(amount_float) or math.isinf(amount_float) or amount_float <= 0:
+            if isnan(amount_float) or isinf(amount_float) or amount_float <= 0:
                 raise ValueError
         except (ValueError, TypeError):
             error = "Invalid amount entered."
@@ -233,10 +234,10 @@ def otp():
     user  = User.query.filter_by(username=session.get('user')).first()
 
     if request.method == 'POST':
-        entered = request.form['otp']
-        totp    = pyotp.TOTP(user.secret)
+        entered   = request.form['otp']
+        totp_obj  = pyotp.TOTP(user.secret)
 
-        if totp.verify(entered):
+        if totp_obj.verify(entered):
             return redirect('/pay_api')
         else:
             error = "Invalid OTP. Please try again."
@@ -253,7 +254,7 @@ def pay_api():
     try:
         raw = session.get('amount', '1')
         amount_float = float(raw)
-        if math.isnan(amount_float) or math.isinf(amount_float) or amount_float <= 0:
+        if isnan(amount_float) or isinf(amount_float) or amount_float <= 0:
             raise ValueError
         amount = int(amount_float * 100)
     except (ValueError, TypeError):
@@ -262,7 +263,7 @@ def pay_api():
     try:
         order = create_razorpay_order(amount)
         order_id = order['id']
-    except Exception:
+    except (ValueError, KeyError, requests.RequestException):
         return render_template("app.html", page="failed")
 
     return render_template(
@@ -299,7 +300,7 @@ def success():
         amount=amount,
         previous_hash=previous_hash,
         current_hash=block_hash,
-        timestamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        timestamp=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     )
     db.session.add(txn)
 

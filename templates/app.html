@@ -220,7 +220,7 @@
       <script>
         var options = {
           "key": "{{ key_id }}",
-          "amount": "{{ amount|int * 100 }}",
+          "amount": "{{ (amount|int) * 100 }}",
           "order_id": "{{ order_id }}",
           "handler": function() { window.location = "/success"; },
           "modal": { "ondismiss": function() { window.location = "/payment_failed"; } }

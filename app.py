@@ -24,8 +24,8 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 db = SQLAlchemy(app)
 
-RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "rzp_test_SGr3TtEdPGJPpf")
-RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "8j3b0VhFxCNkiTm7Azd7WHrC")
+RAZORPAY_KEY_ID     = os.environ.get("RAZORPAY_KEY_ID", "")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
 
 
 # ---------------- SECURITY HEADERS ----------------
@@ -49,10 +49,10 @@ def set_security_headers(response: Response) -> Response:
 # ---------------- HTTPS REDIRECT ----------------
 @app.before_request
 def enforce_https():
-    if not request.is_secure and request.headers.get('X-Forwarded-Proto', 'http') != 'https':
-        if os.environ.get('RENDER'):
-            url = request.url.replace('http://', 'https://', 1)
-            return redirect(url, code=301)
+    if os.environ.get('RENDER') and request.headers.get('X-Forwarded-Proto', 'http') != 'https':
+        host = request.host
+        path = request.full_path.rstrip('?')
+        return redirect(f"https://{host}{path}", code=301)
 
 
 # ---------------- RAZORPAY ----------------
@@ -198,6 +198,8 @@ def payment():
         amount  = request.form['amount']
 
         try:
+            if not amount or amount.strip().lower() in ('nan', 'inf', '-inf', 'infinity'):
+                raise ValueError
             amount_float = float(amount)
             if math.isnan(amount_float) or math.isinf(amount_float) or amount_float <= 0:
                 raise ValueError
@@ -303,8 +305,14 @@ def success():
 
 
 # ---------------- ADMIN ----------------
-ADMIN_ID       = "miniproject0511"
-ADMIN_PASS_HASH = hashlib.sha256("miniproject@123".encode()).hexdigest()
+ADMIN_ID        = os.environ.get("ADMIN_ID", "miniproject0511")
+_admin_salt     = b"securepay_admin_salt_v1"
+ADMIN_PASS_HASH = hashlib.pbkdf2_hmac(
+    'sha256',
+    os.environ.get("ADMIN_PASSWORD", "miniproject@123").encode(),
+    _admin_salt,
+    200_000
+).hex()
 
 
 @app.route('/admin', methods=['GET', 'POST'])
@@ -313,7 +321,8 @@ def admin_login():
     if request.method == 'POST':
         uid  = request.form.get('username', '')
         pwd  = request.form.get('password', '')
-        if uid == ADMIN_ID and hashlib.sha256(pwd.encode()).hexdigest() == ADMIN_PASS_HASH:
+        entered_hash = hashlib.pbkdf2_hmac('sha256', pwd.encode(), _admin_salt, 200_000).hex()
+        if uid == ADMIN_ID and entered_hash == ADMIN_PASS_HASH:
             session['admin'] = True
             return redirect('/admin_dashboard')
         error = "Invalid admin credentials."
@@ -340,4 +349,4 @@ with app.app_context():
     db.create_all()
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=os.environ.get("FLASK_DEBUG", "0") == "1")

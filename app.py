@@ -57,12 +57,15 @@ def enforce_https():
 
 # ---------------- RAZORPAY ----------------
 def create_razorpay_order(amount: int) -> dict:
+    if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
+        raise ValueError("Razorpay credentials not configured.")
     response = requests.post(
         "https://api.razorpay.com/v1/orders",
         auth=HTTPBasicAuth(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET),
         json={"amount": amount, "currency": "INR", "payment_capture": 1},
         timeout=10
     )
+    response.raise_for_status()
     return response.json()
 
 
@@ -256,12 +259,16 @@ def pay_api():
     except (ValueError, TypeError):
         return redirect('/payment')
 
-    order = create_razorpay_order(amount)
+    try:
+        order = create_razorpay_order(amount)
+        order_id = order['id']
+    except Exception:
+        return render_template("app.html", page="failed")
 
     return render_template(
         "app.html",
         page="pay_api",
-        order_id=order['id'],
+        order_id=order_id,
         key_id=RAZORPAY_KEY_ID,
         amount=session.get('amount')
     )

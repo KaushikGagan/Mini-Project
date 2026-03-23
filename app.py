@@ -7,16 +7,18 @@ import qrcode
 import io
 import base64
 import requests
+import math
+import os
 from requests.auth import HTTPBasicAuth
 
 app = Flask(__name__)
-app.secret_key = "secretkey123"
+app.secret_key = os.environ.get("SECRET_KEY", "secretkey123")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db = SQLAlchemy(app)
 
-RAZORPAY_KEY_ID     = "rzp_test_SGr3TtEdPGJPpf"
-RAZORPAY_KEY_SECRET = "8j3b0VhFxCNkiTm7Azd7WHrC"
+RAZORPAY_KEY_ID     = os.environ.get("RAZORPAY_KEY_ID",     "rzp_test_SGr3TtEdPGJPpf")
+RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "8j3b0VhFxCNkiTm7Azd7WHrC")
 
 def create_razorpay_order(amount):
     response = requests.post(
@@ -32,10 +34,10 @@ class User(db.Model):
     username = db.Column(db.String(100), unique=True)
     password = db.Column(db.String(100))
     txnpass  = db.Column(db.String(100))
-    secret   = db.Column(db.String(200))   # TOTP Secret
+    secret   = db.Column(db.String(200))
     attempts = db.Column(db.Integer, default=0)
     blocked  = db.Column(db.Boolean, default=False)
-    balance  = db.Column(db.Float, default=10000.0)  # default demo balance
+    balance  = db.Column(db.Float, default=10000.0)
 
 class Transaction(db.Model):
     id            = db.Column(db.Integer, primary_key=True)
@@ -47,7 +49,7 @@ class Transaction(db.Model):
 
 # ---------------- BLOCKCHAIN HASH ----------------
 def generate_block_hash(username, amount, previous_hash="0" * 64):
-    data = f"{username}{amount}{previous_hash}{datetime.datetime.now()}"
+    data = f"{username}{amount}{previous_hash}{datetime.datetime.now(datetime.timezone.utc)}"
     return hashlib.sha256(data.encode()).hexdigest()
 
 # ---------------- LOGIN ----------------
@@ -111,14 +113,13 @@ def signup():
     db.session.add(new_user)
     db.session.commit()
 
-    # Generate QR Code for Google Authenticator
     totp = pyotp.TOTP(secret)
     uri  = totp.provisioning_uri(name=username, issuer_name="SecurePay")
 
-    img    = qrcode.make(uri)
-    buffer = io.BytesIO()
-    img.save(buffer, format="PNG")
-    img_str = base64.b64encode(buffer.getvalue()).decode()
+    img = qrcode.make(uri)
+    with io.BytesIO() as buffer:
+        img.save(buffer, format="PNG")
+        img_str = base64.b64encode(buffer.getvalue()).decode()
 
     return render_template("setup_totp.html", qr_code=img_str)
 
@@ -132,7 +133,6 @@ def dashboard():
     transactions = Transaction.query.filter_by(username=session['user'])\
                                     .order_by(Transaction.id.desc()).all()
 
-    # Simple fraud detection: flag if any single transaction > 5000
     fraud_alert = any(t.amount > 5000 for t in transactions)
 
     return render_template("dashboard.html",
@@ -152,11 +152,19 @@ def payment():
         txnpass = request.form['txnpass']
         amount  = request.form['amount']
 
+        try:
+            amount_float = float(amount)
+            if math.isnan(amount_float) or math.isinf(amount_float) or amount_float <= 0:
+                raise ValueError
+        except (ValueError, TypeError):
+            error = "Invalid amount entered."
+            return render_template("app.html", page="payment", error=error)
+
         user = User.query.filter_by(username=session['user']).first()
 
         if txnpass != user.txnpass:
             error = "Wrong Transaction Password"
-        elif float(amount) > user.balance:
+        elif amount_float > user.balance:
             error = f"Insufficient balance. Available: ₹{user.balance}"
         else:
             session['amount'] = amount
@@ -191,8 +199,7 @@ def pay_api():
         return redirect('/')
 
     amount = int(float(session.get('amount', 1)) * 100)
-
-    order = create_razorpay_order(amount)
+    order  = create_razorpay_order(amount)
 
     return render_template(
         "app.html",
@@ -215,38 +222,31 @@ def success():
     username = session.get('user')
     amount   = float(session.get('amount', 0))
 
-    # Get previous hash for chaining
     last_txn      = Transaction.query.filter_by(username=username)\
                                      .order_by(Transaction.id.desc()).first()
     previous_hash = last_txn.current_hash if last_txn else "0" * 64
 
     block_hash = generate_block_hash(username, amount, previous_hash)
 
-    # Save transaction to history
     txn = Transaction(
         username=username,
         amount=amount,
         previous_hash=previous_hash,
         current_hash=block_hash,
-        timestamp=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     )
     db.session.add(txn)
 
-    # Deduct balance
     user = User.query.filter_by(username=username).first()
     user.balance = round(user.balance - amount, 2)
 
     db.session.commit()
 
-    return render_template(
-        "app.html",
-        page="success",
-        block_hash=block_hash
-    )
+    return render_template("app.html", page="success", block_hash=block_hash)
 
 # ---------------- MAIN ----------------
 with app.app_context():
     db.create_all()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=os.environ.get("FLASK_DEBUG", "false").lower() == "true")

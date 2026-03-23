@@ -7,3 +7,4 @@ Pillow>=11.0.0
 gunicorn==22.0.0
 setuptools>=70.0.0
 requests>=2.31.0
+psycopg2-binary>=2.9.9

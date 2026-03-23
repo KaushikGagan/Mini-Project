@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>SecurePay — Admin Dashboard</title>
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="dash-wrap">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="logo-icon">🏦</div>
+      <div class="brand-name">Secure<span>Pay</span></div>
+    </div>
+    <nav class="sb-nav">
+      <a href="/admin_dashboard" class="active"><span>🛡</span> Admin Panel</a>
+    </nav>
+    <div class="sb-footer">
+      <a href="/admin_logout"><span>🔓</span> Logout</a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="dash-main">
+
+    <div class="dash-topbar">
+      <div>
+        <div class="greeting">Admin <span>Dashboard</span> 🛡</div>
+        <div class="date-tag" id="live-date"></div>
+      </div>
+      <div class="security-badges">
+        <span class="badge badge-red">🔒 Admin Session</span>
+        <span class="badge badge-cyan">⛓ Blockchain</span>
+      </div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="cards-row" style="margin-bottom:32px;">
+      <div class="stat-card balance">
+        <div class="card-icon">👥</div>
+        <div class="card-label">Total Users</div>
+        <div class="card-value">{{ users | length }}</div>
+        <div class="card-sub">Registered accounts</div>
+      </div>
+      <div class="stat-card txn-count">
+        <div class="card-icon">📋</div>
+        <div class="card-label">Total Transactions</div>
+        <div class="card-value">{{ transactions | length }}</div>
+        <div class="card-sub">All time</div>
+      </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="section-header">
+      <h3>👥 Users</h3>
+      <span class="badge badge-blue">{{ users | length }} records</span>
+    </div>
+
+    <div class="txn-table-wrap" style="margin-bottom:36px;">
+      {% if users %}
+      <table class="txn-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Username</th>
+            <th>Password (hashed)</th>
+            <th>Balance</th>
+            <th>Blocked</th>
+            <th>Attempts</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td style="color:var(--muted);">{{ loop.index }}</td>
+            <td>{{ u.username }}</td>
+            <td class="hash-cell" title="{{ u.password }}">{{ u.password }}</td>
+            <td style="color:var(--accent2); font-weight:600;">₹{{ u.balance }}</td>
+            <td>
+              {% if u.blocked %}
+              <span class="badge badge-red">Blocked</span>
+              {% else %}
+              <span class="badge badge-green">Active</span>
+              {% endif %}
+            </td>
+            <td style="color:var(--muted);">{{ u.attempts }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <div>No users registered yet.</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="section-header">
+      <h3>📋 All Transactions</h3>
+      <span class="badge badge-blue">{{ transactions | length }} records</span>
+    </div>
+
+    <div class="txn-table-wrap">
+      {% if transactions %}
+      <table class="txn-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Username</th>
+            <th>Amount</th>
+            <th>Timestamp</th>
+            <th class="hash-cell">Previous Hash</th>
+            <th class="hash-cell">Current Hash</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for txn in transactions %}
+          <tr>
+            <td style="color:var(--muted);">{{ loop.index }}</td>
+            <td>{{ txn.username }}</td>
+            <td class="amount-cell">− ₹{{ txn.amount }}</td>
+            <td>{{ txn.timestamp }}</td>
+            <td class="hash-cell" title="{{ txn.previous_hash }}">{{ txn.previous_hash }}</td>
+            <td class="hash-cell" title="{{ txn.current_hash }}">{{ txn.current_hash }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div>No transactions yet.</div>
+      </div>
+      {% endif %}
+    </div>
+
+  </main>
+</div>
+<script src="/static/script.js"></script>
+</body>
+</html>

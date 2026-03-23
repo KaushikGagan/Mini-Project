@@ -265,6 +265,7 @@ a:hover { color: var(--accent2); }
 .badge-blue  { background: rgba(59,130,246,.15); color: #93c5fd; border: 1px solid rgba(59,130,246,.25); }
 .badge-green { background: rgba(16,185,129,.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,.25); }
 .badge-cyan  { background: rgba(6,182,212,.15);  color: #67e8f9; border: 1px solid rgba(6,182,212,.25); }
+.badge-red   { background: rgba(239,68,68,.15);  color: #fca5a5; border: 1px solid rgba(239,68,68,.25); }
 
 /* ── Footer ── */
 .auth-footer {

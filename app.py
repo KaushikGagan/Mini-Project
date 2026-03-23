@@ -302,6 +302,39 @@ def success():
     return render_template("app.html", page="success", block_hash=block_hash)
 
 
+# ---------------- ADMIN ----------------
+ADMIN_ID       = "miniproject0511"
+ADMIN_PASS_HASH = hashlib.sha256("miniproject@123".encode()).hexdigest()
+
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin_login():
+    error = ""
+    if request.method == 'POST':
+        uid  = request.form.get('username', '')
+        pwd  = request.form.get('password', '')
+        if uid == ADMIN_ID and hashlib.sha256(pwd.encode()).hexdigest() == ADMIN_PASS_HASH:
+            session['admin'] = True
+            return redirect('/admin_dashboard')
+        error = "Invalid admin credentials."
+    return render_template("admin.html", error=error)
+
+
+@app.route('/admin_dashboard')
+def admin_dashboard():
+    if not session.get('admin'):
+        return redirect('/admin')
+    users        = User.query.all()
+    transactions = Transaction.query.order_by(Transaction.id.desc()).all()
+    return render_template("admin_dashboard.html", users=users, transactions=transactions)
+
+
+@app.route('/admin_logout')
+def admin_logout():
+    session.pop('admin', None)
+    return redirect('/admin')
+
+
 # ---------------- MAIN ----------------
 with app.app_context():
     db.create_all()

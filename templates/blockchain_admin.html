@@ -91,7 +91,7 @@
       <div class="stat-card {% if is_valid %}txn-count{% else %}fraud{% endif %}">
         <div class="card-icon">{% if is_valid %}✅{% else %}🚨{% endif %}</div>
         <div class="card-label">Chain Status</div>
-        <div class="card-value" style="font-size:18px; color:{% if is_valid %}var(--success){% else %}var(--danger){% endif %};">
+        <div class="card-value {% if is_valid %}chain-valid{% else %}chain-invalid{% endif %}" style="font-size:18px;">
           {% if is_valid %}Secure{% else %}Compromised{% endif %}
         </div>
         <div class="card-sub">{% if is_valid %}All hashes verified{% else %}Hash mismatch found{% endif %}</div>

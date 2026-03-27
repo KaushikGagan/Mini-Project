@@ -693,8 +693,5 @@ a:hover { color: var(--accent2); }
   letter-spacing: .4px;
 }
 
-.bc-arrow-tip {
-  font-size: 18px;
-  color: var(--muted);
-  line-height: 1;
-}
+.chain-valid   { color: var(--success); }
+.chain-invalid { color: var(--danger); }

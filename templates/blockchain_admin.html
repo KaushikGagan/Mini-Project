@@ -108,7 +108,11 @@
     <div class="bc-chain">
       {% for txn in transactions %}
 
-      {% set is_tampered = (not is_valid) and (loop.index0 == (tampered_index | default(-1))) %}
+      {% if not is_valid and loop.index0 == (tampered_index | default(-1)) %}
+        {% set is_tampered = true %}
+      {% else %}
+        {% set is_tampered = false %}
+      {% endif %}
 
       <!-- Block -->
       <div class="bc-block {% if is_tampered %}bc-block-bad{% else %}bc-block-ok{% endif %}">

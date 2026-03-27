@@ -312,6 +312,52 @@ def success():
     return render_template("app.html", page="success", block_hash=block_hash)
 
 
+# ---------------- BLOCKCHAIN VERIFY ----------------
+def verify_blockchain() -> tuple[bool, int]:
+    txns = Transaction.query.order_by(Transaction.id).all()
+    for i in range(1, len(txns)):
+        expected = generate_block_hash(
+            txns[i].username,
+            txns[i].amount,
+            txns[i - 1].current_hash
+        )
+        if txns[i].current_hash != expected:
+            return False, i
+    return True, -1
+
+
+@app.route('/admin/blockchain')
+def admin_blockchain():
+    if not session.get('admin'):
+        return redirect('/admin')
+    txns = Transaction.query.order_by(Transaction.id).all()
+    is_valid, tampered_index = verify_blockchain()
+    return render_template('blockchain_admin.html',
+                           transactions=txns,
+                           is_valid=is_valid,
+                           tampered_index=tampered_index)
+
+
+@app.route('/admin/tamper_demo')
+def admin_tamper_demo():
+    if not session.get('admin'):
+        return redirect('/admin')
+    txns = Transaction.query.order_by(Transaction.id).all()
+    tampered_txns = list(txns)
+    if len(tampered_txns) > 0:
+        from copy import copy
+        fake = copy(tampered_txns[0])
+        fake.current_hash = 'TAMPERED_' + fake.current_hash[9:]
+        tampered_txns[0] = fake
+    is_valid = False if len(tampered_txns) > 0 else True
+    tampered_index = 0 if len(tampered_txns) > 0 else -1
+    return render_template('blockchain_admin.html',
+                           transactions=tampered_txns,
+                           is_valid=is_valid,
+                           tampered_index=tampered_index,
+                           demo_mode=True)
+
+
 # ---------------- ADMIN ----------------
 ADMIN_ID        = os.environ.get("ADMIN_ID", "miniproject0511")
 _admin_salt     = b"securepay_admin_salt_v1"

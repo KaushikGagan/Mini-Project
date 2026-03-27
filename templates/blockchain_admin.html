@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>SecurePay — Blockchain Explorer</title>
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="dash-wrap">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="logo-icon">🏦</div>
+      <div class="brand-name">Secure<span>Pay</span></div>
+    </div>
+    <nav class="sb-nav">
+      <a href="/admin_dashboard"><span>🛡</span> Admin Panel</a>
+      <a href="/admin/blockchain" class="active"><span>⛓</span> Blockchain Explorer</a>
+    </nav>
+    <div class="sb-footer">
+      <a href="/admin_logout"><span>🔓</span> Logout</a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="dash-main">
+
+    <div class="dash-topbar">
+      <div>
+        <div class="greeting">⛓ Blockchain <span>Explorer</span></div>
+        <div class="date-tag" id="live-date"></div>
+      </div>
+      <div class="security-badges">
+        <span class="badge badge-red">🔒 Admin Only</span>
+        {% if is_valid %}
+        <span class="badge badge-green">✅ Chain Valid</span>
+        {% else %}
+        <span class="badge badge-red">🚨 Tampered</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Integrity Banner -->
+    {% if demo_mode is defined and demo_mode %}
+    <div class="bc-banner bc-banner-warn">
+      <span style="font-size:20px;">⚠️</span>
+      <div><strong>Demo Mode</strong> — This is a simulated tamper. No real data was modified.</div>
+    </div>
+    {% endif %}
+
+    {% if is_valid %}
+    <div class="bc-banner bc-banner-ok">
+      <span style="font-size:24px;">✅</span>
+      <div>
+        <strong>Blockchain Integrity Verified</strong>
+        <div style="font-size:12px; margin-top:2px;">All {{ transactions | length }} blocks are cryptographically linked and unmodified.</div>
+      </div>
+    </div>
+    {% else %}
+    <div class="bc-banner bc-banner-err">
+      <span style="font-size:24px;">🚨</span>
+      <div>
+        <strong>Tampering Detected! Chain Broken</strong>
+        <div style="font-size:12px; margin-top:2px;">Block #{{ tampered_index + 1 }} hash does not match the expected value.</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div style="display:flex; gap:12px; margin-bottom:28px; flex-wrap:wrap;">
+      <a href="/admin/blockchain" class="btn btn-primary" style="width:auto; padding:10px 20px; font-size:13px;">
+        🔄 Verify Chain
+      </a>
+      <a href="/admin/tamper_demo" class="btn btn-danger" style="width:auto; padding:10px 20px; font-size:13px;">
+        ⚠️ Simulate Tampering
+      </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="cards-row" style="margin-bottom:32px;">
+      <div class="stat-card balance">
+        <div class="card-icon">⛓</div>
+        <div class="card-label">Total Blocks</div>
+        <div class="card-value">{{ transactions | length }}</div>
+        <div class="card-sub">Transactions on chain</div>
+      </div>
+      <div class="stat-card {% if is_valid %}txn-count{% else %}fraud{% endif %}">
+        <div class="card-icon">{% if is_valid %}✅{% else %}🚨{% endif %}</div>
+        <div class="card-label">Chain Status</div>
+        <div class="card-value" style="font-size:18px; color:{% if is_valid %}var(--success){% else %}var(--danger){% endif %};">
+          {% if is_valid %}Secure{% else %}Compromised{% endif %}
+        </div>
+        <div class="card-sub">{% if is_valid %}All hashes verified{% else %}Hash mismatch found{% endif %}</div>
+      </div>
+    </div>
+
+    <!-- Blockchain Blocks -->
+    {% if transactions %}
+    <div class="section-header" style="margin-bottom:20px;">
+      <h3>⛓ Block Chain</h3>
+      <span class="badge badge-blue">{{ transactions | length }} blocks</span>
+    </div>
+
+    <div class="bc-chain">
+      {% for txn in transactions %}
+
+      {% set is_tampered = (not is_valid and loop.index0 == tampered_index) %}
+
+      <!-- Block -->
+      <div class="bc-block {% if is_tampered %}bc-block-bad{% else %}bc-block-ok{% endif %}">
+
+        <div class="bc-block-header">
+          <div class="bc-block-num">Block #{{ loop.index }}</div>
+          <div class="bc-block-status">
+            {% if is_tampered %}
+            <span class="badge badge-red">🚨 Tampered</span>
+            {% else %}
+            <span class="badge badge-green">✅ Valid</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="bc-block-body">
+          <div class="bc-row">
+            <span class="bc-label">👤 User</span>
+            <span class="bc-value">{{ txn.username }}</span>
+          </div>
+          <div class="bc-row">
+            <span class="bc-label">💰 Amount</span>
+            <span class="bc-value" style="color:var(--danger); font-weight:700;">− ₹{{ txn.amount }}</span>
+          </div>
+          <div class="bc-row">
+            <span class="bc-label">🕐 Time</span>
+            <span class="bc-value">{{ txn.timestamp }}</span>
+          </div>
+          <div class="bc-hash-row">
+            <span class="bc-label">⬅ Prev Hash</span>
+            <span class="bc-hash bc-hash-prev" title="{{ txn.previous_hash }}">{{ txn.previous_hash }}</span>
+          </div>
+          <div class="bc-hash-row">
+            <span class="bc-label">🔑 Curr Hash</span>
+            <span class="bc-hash {% if is_tampered %}bc-hash-bad{% else %}bc-hash-curr{% endif %}" title="{{ txn.current_hash }}">{{ txn.current_hash }}</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Arrow connector (not after last block) -->
+      {% if not loop.last %}
+      <div class="bc-arrow">
+        <div class="bc-arrow-line"></div>
+        <div class="bc-arrow-label">prev_hash links to ↑ current_hash</div>
+        <div class="bc-arrow-tip">↓</div>
+      </div>
+      {% endif %}
+
+      {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="empty-state" style="margin-top:40px;">
+      <div class="empty-icon">⛓</div>
+      <div>No blocks on chain yet.</div>
+      <div style="font-size:12px; margin-top:6px;">Transactions will appear here after payments are made.</div>
+    </div>
+    {% endif %}
+
+  </main>
+</div>
+<script src="/static/script.js"></script>
+</body>
+</html>

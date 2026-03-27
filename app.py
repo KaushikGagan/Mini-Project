@@ -91,8 +91,8 @@ class Transaction(db.Model):
 
 
 # ---------------- BLOCKCHAIN HASH ----------------
-def generate_block_hash(username: str, amount: float, previous_hash: str = "0" * 64) -> str:
-    data = f"{username}{amount}{previous_hash}{datetime.now(timezone.utc)}"
+def generate_block_hash(username: str, amount: float, timestamp: str, previous_hash: str = "0" * 64) -> str:
+    data = f"{username}{amount}{timestamp}{previous_hash}"
     return hashlib.sha256(data.encode()).hexdigest()
 
 
@@ -293,14 +293,15 @@ def success():
                                      .order_by(Transaction.id.desc()).first()
     previous_hash = last_txn.current_hash if last_txn else "0" * 64
 
-    block_hash = generate_block_hash(username, amount, previous_hash)
+    timestamp  = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    block_hash = generate_block_hash(username, amount, timestamp, previous_hash)
 
     txn = Transaction(
         username=username,
         amount=amount,
         previous_hash=previous_hash,
         current_hash=block_hash,
-        timestamp=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        timestamp=timestamp
     )
     db.session.add(txn)
 
@@ -319,6 +320,7 @@ def verify_blockchain() -> tuple[bool, int]:
         expected = generate_block_hash(
             txns[i].username,
             txns[i].amount,
+            txns[i].timestamp,
             txns[i - 1].current_hash
         )
         if txns[i].current_hash != expected:
